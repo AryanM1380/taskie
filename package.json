@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "dayjs": "^1.11.13",
-    "react-native-ui-datepicker": "^3.1.2"
-  }
-}
