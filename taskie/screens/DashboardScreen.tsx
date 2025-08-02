@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert, Modal, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import DateTimePicker, { DateType, useDefaultStyles } from 'react-native-ui-datepicker';
+import { Calendar } from 'react-native-calendars';
 
 const getFormattedDate = () => {
   const now = new Date();
@@ -36,7 +37,7 @@ const getRandomQuote = () => {
   return motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
 };
 
-const DashboardScreen = () => {
+const DashboardScreen = ({ navigation }: any) => {
   const [time, setTime] = useState(getFormattedTime());
   const [date, setDate] = useState(getFormattedDate());
 
@@ -48,6 +49,9 @@ const DashboardScreen = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [userName, setUserName] = useState('Aryan');
+  const [userEmail, setUserEmail] = useState('ahpreal@gmail.com');
 
   const defaultStyles = useDefaultStyles();
 
@@ -60,6 +64,24 @@ const DashboardScreen = () => {
 
   const currentDateKey = getDateKey(selectedDate);
   const todos = todosByDate[currentDateKey] || [];
+
+  // Prepare marked dates for calendar
+  const markedDates: { [date: string]: any } = {};
+  Object.keys(todosByDate).forEach(dateKey => {
+    if (todosByDate[dateKey] && todosByDate[dateKey].length > 0) {
+      markedDates[dateKey] = {
+        customStyles: {
+          container: { backgroundColor: 'green', borderRadius: 8 },
+          text: { color: 'white', fontWeight: 'bold' },
+        },
+      };
+    }
+  });
+  markedDates[getDateKey(selectedDate)] = {
+    ...(markedDates[getDateKey(selectedDate)] || {}),
+    selected: true,
+    selectedColor: '#4f8cff',
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -171,54 +193,116 @@ const DashboardScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.time}>{time}</Text>
-        <Text style={styles.date}>{date}</Text>
-      </View>
-      <View style={styles.calendarContainer}>
-        <DateTimePicker
-          mode="single"
-          date={selectedDate}
-          onChange={({ date }) => setSelectedDate(date)}
-          styles={defaultStyles}
-        />
-      </View>
-      <View style={styles.main}>
-        <Text style={styles.greeting}>Welcome back, Aryan!</Text>
-        <Text style={styles.tagline}>Your day is under control.</Text>
-        {/* To-do input form */}
-        <TextInput
-          style={styles.input}
-          placeholder="Task Title"
-          value={title}
-          onChangeText={setTitle}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Task Description (optional)"
-          value={description}
-          onChangeText={setDescription}
-        />
-        <TouchableOpacity style={styles.addButton} onPress={handleAddTodo}>
-          <Text style={styles.buttonText}>Add Task</Text>
-        </TouchableOpacity>
-        {/* To-do list */}
-        {todos.length === 0 ? (
-          <Text style={styles.emptyText}>{getRandomQuote()}</Text>
-        ) : (
-          <FlatList
-            data={todos}
-            keyExtractor={item => item.id}
-            renderItem={renderTodo}
-            style={styles.todoList}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={80}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.time}>{time}</Text>
+          <Text style={styles.date}>{date}</Text>
+          <TouchableOpacity
+            style={styles.profileCircle}
+            onPress={() => setProfileModalVisible(true)}
+          >
+            <Image
+              source={require('../assets/icon.png')}
+              style={styles.profileImage}
+            />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.calendarContainer}>
+          <Calendar
+            onDayPress={day => setSelectedDate(new Date(day.dateString))}
+            markedDates={markedDates}
+            markingType={'custom'}
+            current={getDateKey(selectedDate)}
+            theme={{
+              todayTextColor: '#4f8cff',
+              arrowColor: '#4f8cff',
+            }}
           />
-        )}
+        </View>
+        <View style={styles.main}>
+          <Text style={styles.greeting}>Welcome back, {userName}!</Text>
+          <Text style={styles.tagline}>Your day is under control.</Text>
+          {/* To-do input form */}
+          <TextInput
+            style={styles.input}
+            placeholder="Task Title"
+            value={title}
+            onChangeText={setTitle}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Task Description (optional)"
+            value={description}
+            onChangeText={setDescription}
+          />
+          <TouchableOpacity style={styles.addButton} onPress={handleAddTodo}>
+            <Text style={styles.buttonText}>Add Task</Text>
+          </TouchableOpacity>
+          {/* To-do list */}
+          {todos.length === 0 ? (
+            <Text style={styles.emptyText}>{getRandomQuote()}</Text>
+          ) : (
+            <FlatList
+              data={todos}
+              keyExtractor={item => item.id}
+              renderItem={renderTodo}
+              style={styles.todoList}
+            />
+          )}
+        </View>
+        <View style={styles.footer}>
+          <Text style={styles.logoutPlaceholder}>Logout (see profile)</Text>
+        </View>
+        {/* Profile Modal */}
+        <Modal
+          visible={profileModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setProfileModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Profile</Text>
+              <Image source={require('../assets/icon.png')} style={styles.profileImageLarge} />
+              <TextInput
+                style={styles.input}
+                value={userName}
+                onChangeText={setUserName}
+                placeholder="Name"
+              />
+              <TextInput
+                style={styles.input}
+                value={userEmail}
+                onChangeText={setUserEmail}
+                placeholder="Email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={() => {
+                  setProfileModalVisible(false);
+                  navigation.replace && navigation.replace('Login');
+                }}
+              >
+                <Text style={styles.buttonText}>Logout</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setProfileModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
-      <View style={styles.footer}>
-        <Text style={styles.logoutPlaceholder}>Logout (coming soon)</Text>
-      </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -363,6 +447,66 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 12,
+  },
+  profileCircle: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  profileImageLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  logoutButton: {
+    backgroundColor: '#ff4f4f',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    marginTop: 16,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  closeButton: {
+    backgroundColor: '#bbb',
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    marginTop: 10,
+    alignSelf: 'stretch',
+    alignItems: 'center',
   },
 });
 
